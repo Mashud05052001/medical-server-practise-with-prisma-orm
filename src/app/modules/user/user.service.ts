@@ -140,7 +140,7 @@ const getAllUsers = async (
     });
   }
 
-  //   console.dir(andConditions, { depth: "Infinity" });
+  console.dir(andConditions, { depth: "Infinity" });
   const result = await prisma.user.findMany({
     where: { AND: andConditions },
     take: limit,

@@ -1,30 +1,19 @@
 import { Doctor, Prisma, UserStatus } from "@prisma/client";
-import { TPaginationOptions } from "../../interface/pagination";
-import { TDoctorFilterRequest, TDoctorUpdate } from "./doctor.interface";
-import { calculatePagination } from "../../helpers/paginationHelpers";
-import { doctorSearchableFields } from "./doctor.constant";
 import { prisma } from "../../config";
+import { TPaginationOptions } from "../../interface/pagination";
+import { returnMetaData } from "../../utils/returnMetaData";
+import { searchQueryBuilder } from "../../utils/searchQueryBuilder";
+import { doctorSearchableFields } from "./doctor.constant";
+import { TDoctorFilterRequest, TDoctorUpdate } from "./doctor.interface";
 
 const getAllFromDB = async (
   filters: TDoctorFilterRequest,
   options: TPaginationOptions
 ) => {
-  const { limit, page, skip, sortBy, sortOrder } = calculatePagination(options);
-  const { searchTerm, specialties, ...filterData } = filters;
+  const { specialties, ...filterData } = filters;
 
   const andConditions: Prisma.DoctorWhereInput[] = [];
 
-  if (searchTerm) {
-    andConditions.push({
-      OR: doctorSearchableFields.map((field) => ({
-        [field]: {
-          contains: searchTerm,
-          mode: "insensitive",
-        },
-      })),
-    });
-  }
-  // console.log(specialties);
   if (specialties && specialties.length > 0) {
     specialties.split(",").map((specialty) =>
       andConditions.push({
@@ -41,30 +30,23 @@ const getAllFromDB = async (
       })
     );
   }
-  // console.dir(andConditions, { depth: "Infinity" });
-
-  if (Object.keys(filterData).length > 0) {
-    const filterConditions = Object.keys(filterData).map((key) => ({
-      [key]: {
-        equals: (filterData as any)[key],
-      },
-    }));
-    andConditions.push(...filterConditions);
-  }
 
   andConditions.push({
     isDeleted: false,
   });
 
-  const whereConditions: Prisma.DoctorWhereInput =
-    andConditions.length > 0 ? { AND: andConditions } : {};
+  const query = searchQueryBuilder({
+    filters: filterData,
+    pagination: options,
+    additionalConditions: andConditions,
+    searchableFields: doctorSearchableFields,
+  });
 
   const result = await prisma.doctor.findMany({
-    where: whereConditions,
-    skip,
-    take: limit,
-    orderBy:
-      sortBy && sortOrder ? { [sortBy]: sortOrder } : { createdAt: "desc" },
+    where: query.where,
+    skip: query.skip,
+    take: query.limit,
+    orderBy: query.orderBy,
     include: {
       DoctorSpecialist: {
         include: {
@@ -75,17 +57,10 @@ const getAllFromDB = async (
   });
 
   const total = await prisma.doctor.count({
-    where: whereConditions,
+    where: query.where,
   });
 
-  return {
-    meta: {
-      total,
-      page,
-      limit,
-    },
-    data: result,
-  };
+  return returnMetaData(total, query.page, query.limit, result);
 };
 
 const getByIdFromDB = async (id: string): Promise<Doctor | null> => {

@@ -56,7 +56,7 @@ model Doctor {
   appointmentFee        Int 
   qualification         String 
   currentWorkingPlace   String
-  designaton            String 
+  designation           String 
   isDeleted             Boolean @default(false)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -65,25 +65,10 @@ model Doctor {
   // Relations
   User User @relation(fields: [email], references: [email])
   DoctorSpecialist DoctorSpecialist[]
+  DoctorSchedules DoctorSchedules[]
 
 
   @@map("doctors")
-}
-
-model Patient {
-  id            String   @id @unique @default(uuid())
-  email         String   @unique
-  name          String
-  profilePhoto  String?
-  contactNumber String?
-  address       String?
-  isDeleted     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(references: [email], fields: [email])
-
-  @@map("patients")
 }
 
 model Specialities {
@@ -106,6 +91,89 @@ model DoctorSpecialist {
   @@map("doctorSpecialists")
 }
 
+model Patient {
+  id            String   @id @unique @default(uuid())
+  email         String   @unique
+  name          String
+  profilePhoto  String?
+  contactNumber String?
+  address       String?
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(references: [email], fields: [email])
+
+  @@map("patients")
+  PatientHealthCare PatientHealthCare?
+  MedicalReport MedicalReport[]
+}
+
+model PatientHealthCare {
+  id                   String @id @default(uuid())
+  patientId            String @unique
+  dateOfBirth          DateTime
+  gender               Gender
+  bloodGroup           BloodGroup
+  hasAllergies         Boolean @default(false)
+  hasDiabetes          Boolean @default(false)
+  height               String
+  weight               String 
+  smokingStatus        Boolean @default(false)
+  dietaryPreferences   String?
+  pregnancyStatus      Boolean @default(false)
+  mentalHealthHistory  String?
+  immunizationStatus   String?
+  hasPastSurgeries     Boolean @default(false)
+  recentAnxiety        Boolean @default(false)
+  recentDepression     Boolean @default(false)
+  maritalStatus        MaritalStatus @default(UNMARRIED)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+
+  // Relations
+  PatientId Patient @relation(fields: [patientId], references: [id])
+
+  @@map("patientHealthCare")
+}
+
+model MedicalReport {
+  id String @id @default(uuid())
+  patientId String
+  reportName String
+  reportLink String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  PatientId Patient @relation(fields: [patientId], references: [id])
+
+}
+
+model Schedule {
+  id String @id @default(uuid())
+  startDate DateTime
+  endDate DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  DoctorSchedules DoctorSchedules?
+
+  @@map("schedules")
+}
+
+model DoctorSchedules {
+  doctorId String
+  scheduleId String @unique
+  isBooked Boolean
+
+  @@unique([doctorId,scheduleId])
+  DoctorId Doctor @relation(fields: [doctorId],references: [id])
+  ScheduleId Schedule @relation(fields: [scheduleId],references: [id])
+}
+
+
+
 
 enum UserRole {
   SUPER_ADMIN  
@@ -122,4 +190,18 @@ enum Gender {
   MALE
   FEMALE
   OTHERS
+}
+enum BloodGroup {
+  A_POSITIVE
+  B_POSITIVE
+  O_POSITIVE
+  AB_POSITIVE
+  A_NEGATIVE
+  B_NEGATIVE
+  O_NEGATIVE
+  AB_NEGATIVE
+}
+enum MaritalStatus {
+  MARRIED
+  UNMARRIED
 }

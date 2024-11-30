@@ -16,7 +16,7 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
   }
 
   clearUploadFolder();
-
+  console.log(error);
   res.status(statusCode).send({
     success: false,
     message,
